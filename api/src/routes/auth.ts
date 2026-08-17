@@ -28,6 +28,9 @@ export async function authRoutes(app: FastifyInstance) {
       req: FastifyRequest<{ Body: { username: string; password: string } }>,
       reply: FastifyReply
     ) => {
+      if (process.env.ALLOW_REGISTRATION === "false") {
+        return reply.code(403).send({ error: "registration disabled" });
+      }
       const { username, password } = req.body;
       if (!username || !password) return reply.code(400).send({ error: "username and password required" });
 

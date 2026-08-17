@@ -1,0 +1,26 @@
+# Lokalne poprawki. Celowo w override, a nie w docker-compose.yml:
+# procedura aktualizacji z README robi
+#   git checkout origin/main -- api/ docker-compose.yml
+# co skasowaloby zmiany wprowadzone bezposrednio w docker-compose.yml.
+services:
+  api:
+    # !override zastepuje liste portow zamiast ja doklejac (listy w compose sa
+    # domyslnie laczone). Bez tego dostalibysmy OBA mapowania naraz.
+    #
+    # Powod bindu na 127.0.0.1: "3005:3000" publikuje na 0.0.0.0, a Docker
+    # wstawia wlasne reguly DNAT w lancuchu DOCKER, ktore OMIJAJA ufw.
+    # ufw z "default deny" nie chroni portow publikowanych przez Dockera.
+    # Ruch z zewnatrz trafia tu wylacznie przez `tailscale serve`, ktore laczy
+    # sie po loopbacku, wiec nic na tym nie tracimy.
+    ports: !override
+      - "127.0.0.1:${PORT:-3005}:3000"
+    environment:
+      # docker-compose.yml z repo NIE przekazuje INSTANCE_TOKEN, a jego brak
+      # sprawia, ze /admin/* przepuszcza kazde zadanie bez uwierzytelnienia
+      # (api/src/routes/admin.ts:11-12  ->  if (!token) return true).
+      - INSTANCE_TOKEN=${INSTANCE_TOKEN:?INSTANCE_TOKEN musi byc ustawiony w .env}
+      # Rejestracje tworza DWIE sciezki: /auth/register (klient) oraz
+      # POST /web/login z action=register (panel). Ta druga nie sprawdza nawet
+      # bramki gate_ok — jest ona egzekwowana tylko w GET / (web.ts:969).
+      # Latka w src/routes/{auth,web}.ts zamyka obie naraz.
+      - ALLOW_REGISTRATION=${ALLOW_REGISTRATION:-true}

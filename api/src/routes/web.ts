@@ -1036,6 +1036,9 @@ export async function webRoutes(app: FastifyInstance) {
     const isLauncher = launcher === "1";
 
     if (action === "register") {
+      if (process.env.ALLOW_REGISTRATION === "false") {
+        return reply.type("text/html").send(loginPage("Registration is disabled.", isLauncher));
+      }
       if (!username || !password) return reply.type("text/html").send(loginPage("Username and password required.", isLauncher));
       const existing = db.prepare("SELECT id FROM users WHERE username = ?").get(username);
       if (existing) return reply.type("text/html").send(loginPage("Username already taken.", isLauncher));
